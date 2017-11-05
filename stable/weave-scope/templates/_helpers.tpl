@@ -9,7 +9,7 @@ app: {{ template "weave-scope.name" . }}
 {{/* Weave Scope default annotations */}}
 {{- define "weave-scope.annotations" }}
 cloud.weave.works/launcher-info: |-
-  { 
+  {
     "server-version": "master-4fe8efe",
     "original-request": {
       "url": "/k8s/v1.7/scope.yaml"
@@ -34,4 +34,9 @@ Create a default fully qualified app name.  We truncate at 63 chars.
 {{- printf "%s-%s" .Chart.Name .Release.Name | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 
-
+{{/*
+Create a default fully qualified app name.  We truncate at 63 chars.
+*/}}
+{{- define "weave-scope.frontend.fullname" -}}
+{{- printf "%s-%s" "weave-scope-frontend" .Release.Name | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
