@@ -1,13 +1,10 @@
-imagePullPolicy: IfNotPresent
-
-# The image to use. Spilo is the dockerized Patroni
-spilo:
-  # this image was built from https://github.com/zalando/spilo/tree/master/postgres-appliance
-  image: registry.opensource.zalan.do/acid/spilo-9.6
-  version: 1.2-p17
+image:
+  repository: unguiculus/spilo
+  tag: latest
+  pullPolicy: Always
 
 # How many postgres containers to spawn
-replicas: 5
+replicas: 3
 
 podAntiAffinity: soft
 
@@ -15,36 +12,20 @@ nodeSelector: {}
 
 tolerations: []
 
-# Resource limits per replica
+# Resource requests and limits per pod
 resources: {}
-  # cpu: 100m
-  # memory: 512Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 256Mi
+  # limits:
+  #   cpu: 500m
+  #   memory: 512Mi
 
-# Node selector for Patroni pods
-# nodeSelector:
-#  cloud.google.com/gke-nodepool: highmem-pool
-
-# Credentials used by Patroni
-# * more information: https://github.com/zalando/patroni/blob/master/docs/SETTINGS.rst#postgresql
 credentials:
   superuser: tea
-  admin: cola
   standby: pinacolada
 
-## Distribution Configuration stores. Please note that only one of the following stores should be selected.
-etcd:
-  enable: true
-  deployChart: true
-  # if not deploying etcd chart, fill-in value for etcd host (etcd.default.svc.cluster.local)
-  host:
-  # leave blank to use vendored etcd chart
-  discovery:
-
-zookeeper:
-  enable: false
-  deployChart: false
-  # if not deploying etcd chart, fill-in list of ZooKeeper cluster members in format: 'host1:port1','host2:port2','etc...'
-  hosts:
+useConfigMaps: false
 
 walE:
   enable: false
@@ -69,5 +50,9 @@ persistentVolume:
     - ReadWriteOnce
   size: 1Gi
   annotations: {}
-  subPath: ""
-  mountPath: "/home/postgres/pgdata"
+
+cleanup:
+  image:
+    repository: quay.io/coreos/hyperkube
+    tag: v1.8.4_coreos.0
+    pullPolicy: IfNotPresent

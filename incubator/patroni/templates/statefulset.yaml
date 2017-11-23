@@ -7,6 +7,8 @@ metadata:
     chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
     release: {{ .Release.Name }}
     heritage: {{ .Release.Service }}
+    application: {{ template "patroni.name" . }}
+    cluster: {{ template "patroni.fullname" . }}
 spec:
   serviceName: {{ template "patroni.fullname" . }}
   replicas: {{ .Values.replicas }}
@@ -15,45 +17,58 @@ spec:
       labels:
         app: {{ template "patroni.name" . }}
         release: {{ .Release.Name }}
+        application: {{ template "patroni.name" . }}
+        cluster: {{ template "patroni.fullname" . }}
     spec:
       containers:
         - name: spilo
-          image: "{{ .Values.spilo.image }}:{{ .Values.spilo.version }}"
+          image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
           env:
+            - name: DEBUG
+              value: "true"
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: metadata.namespace
+            - name: DCS_ENABLE_KUBERNETES_API
+              value: "true"
+            - name: USE_KUBERNETES
+              value: "true"
+          {{- if .Values.useConfigMaps }}
+            - name: KUBERNETES_USE_CONFIGMAPS
+              value: "true"
+          {{- end }}
+            - name: PATRONI_CONFIGURATION
+              value: |
+                postgresql:
+                  bin_dir: /usr/lib/postgresql/9.6/bin
+                kubernetes:
+                  labels:
+                    app: {{ template "patroni.name" . }}
+                    release: {{ .Release.Name }}
+                    application: {{ template "patroni.name" . }}
+                    cluster: {{ template "patroni.fullname" . }}
+                  scope_label: cluster
+            - name: SCOPE
+              value: {{ template "patroni.fullname" . }}
             - name: PGPASSWORD_SUPERUSER
               valueFrom:
                 secretKeyRef:
                   name: {{ template "patroni.fullname" . }}
                   key: password-superuser
-            - name: PGPASSWORD_ADMIN
-              valueFrom:
-                secretKeyRef:
-                  name: {{ template "patroni.fullname" . }}
-                  key: password-admin
             - name: PGPASSWORD_STANDBY
               valueFrom:
                 secretKeyRef:
                   name: {{ template "patroni.fullname" . }}
                   key: password-standby
-        {{ if .Values.etcd.enable }}
-          {{ if .Values.etcd.deployChart }}
-            - name: ETCD_DISCOVERY_DOMAIN
-              value: {{ default (include "patroni.etcd.fullname" .) .Values.etcd.discovery }}
-          {{ else }}
-            - name: ETCD_HOST
-              value: {{ .Values.etcd.host | quote }}
-          {{ end }}
-        {{ else if .Values.zookeeper.enable }}
-          {{ if .Values.zookeeper.deployChart }}
-            - name: ZOOKEEPER_HOSTS
-              value: {{ (printf "'hs-zk-%s:2181'" .Release.Name | trunc 63) }}
-          {{ else }}
-            - name: ZOOKEEPER_HOSTS
-              value: {{ .Values.zookeeper.hosts | quote }}
-          {{ end }}
-        {{ end }}
-            - name: SCOPE
-              value: {{ template "patroni.fullname" . }}
+            - name: PGROOT
+              value: /home/postgres/pgdata
         {{ if .Values.walE.enable }}
             - name: USE_WALE
               value: {{ .Values.walE.enable | quote }}
@@ -84,26 +99,19 @@ spec:
             - name: WALE_BACKUP_THRESHOLD_PERCENTAGE
               value: {{ .Values.walE.backupThresholdPercentage | quote }}
           {{ end }}
-        {{ else }}
-            - name: USE_WALE
-              value: ""
         {{ end }}
-            - name: PGROOT
-              value: "{{ .Values.persistentVolume.mountPath }}/pgroot"
-            - name: POD_NAMESPACE
-              valueFrom:
-                fieldRef:
-                  apiVersion: v1
-                  fieldPath: metadata.namespace
           ports:
             - containerPort: 8008
+              name: patroni
+              protocol: TCP
             - containerPort: 5432
+              name: postgresql
+              protocol: TCP
           resources:
   {{ toYaml .Values.resources | indent 12 }}
           volumeMounts:
             - name: datadir
-              mountPath: "{{ .Values.persistentVolume.mountPath }}"
-              subPath: "{{ .Values.persistentVolume.subPath }}"
+              mountPath: /home/postgres/pgdata
             - mountPath: /etc/patroni
               name: patroni-config
               readOnly: true

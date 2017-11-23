@@ -1,0 +1,37 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ template "patroni.fullname" . }}-cleanup
+  labels:
+    app: {{ template "patroni.name" . }}
+    chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+    application: {{ template "patroni.name" . }}
+    cluster: {{ template "patroni.fullname" . }}
+  annotations:
+    "helm.sh/hook": post-delete
+    "helm.sh/hook-delete-policy": hook-succeeded
+spec:
+  template:
+    metadata:
+      labels:
+        app: {{ template "patroni.name" . }}
+        release: {{ .Release.Name }}
+        application: {{ template "patroni.name" . }}
+        cluster: {{ template "patroni.fullname" . }}
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: configmap-cleanup
+          image: {{ .Values.cleanup.image.repository }}:{{ .Values.cleanup.image.tag }}
+          imagePullPolicy: {{ .Values.cleanup.image.pullPolicy }}
+          command:
+            - sh
+            - -c
+            - |
+              kubectl delete configmap --namespace {{ .Release.Namespace }} \
+                  --selector app={{ template "patroni.name" . }},release={{ .Release.Name }}
+
+              kubectl delete endpoints --namespace {{ .Release.Namespace }} \
+                  --selector app={{ template "patroni.name" . }},release={{ .Release.Name }}

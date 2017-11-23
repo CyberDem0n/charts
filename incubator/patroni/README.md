@@ -1,24 +1,14 @@
 # Patroni Helm Chart
 
-This directory contains a Kubernetes chart to deploy a [Patroni](https://github.com/zalando/patroni/) cluster using a statefulset.
+This chart deploys a [Patroni](https://github.com/zalando/patroni/) cluster using a StatefulSet. It is based on 
+an image which allows Patroni to be run without an external DCS (Consul, Etcd, Zookeeper).
+
+See https://github.com/zalando/spilo/pull/198 and https://github.com/zalando/patroni/pull/500.
 
 ## Prerequisites Details
+
 * Kubernetes 1.7+
 * PV support on the underlying infrastructure
-
-## Statefulset Details
-* https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/
-
-## Statefulset Caveats
-* https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#limitations
-
-## Todo
-* Make namespace configurable
-
-## Chart Details
-This chart will do the following:
-
-* Implement a HA scalable PostgreSQL cluster using Kubernetes PetSets
 
 ## Installing the Chart
 
@@ -27,100 +17,47 @@ To install the chart with the release name `my-release`:
 ```console
 $ helm repo add incubator https://kubernetes-charts-incubator.storage.googleapis.com/
 $ helm dependency update
-$ helm install --name my-release incubator/patroni
-```
-
-## Connecting to Postgres
-
-Your access point is a cluster IP. In order to access it spin up another pod:
-
-```console
-$ kubectl run -i --tty ubuntu --image=ubuntu:16.04 --restart=Never -- bash -il
-```
-
-Then, from inside the pod, connect to postgres:
-
-```console
-$ apt-get update && apt-get install postgresql-client -y
-$ psql -U admin -h my-release-patroni.default.svc.cluster.local postgres
-<admin password from values.yaml>
-postgres=>
+$ helm install --name my-release incubator/patroni-k8s
 ```
 
 ## Configuration
 
-The following tables lists the configurable parameters of the patroni chart and their default values.
+The following tables lists the configurable parameters of the patroni-k8s chart and their default values.
 
 | Parameter | Description | Default |
 |-------------------------|-------------------------------------|-----------------------------------------------------|
-| `spilo.image` | Container image name | `registry.opensource.zalan.do/acid/spilo-9.5` |
-| `spilo.version` | Container image tag | `1.0-p5` |
-| `imagePullPolicy` | Container pull policy | `IfNotPresent` |
-| `replicas` | k8s statefulset replicas | `5` |
+| `image.repository` | Patroni image repository | `unguiculus/patroni` |
+| `image.tag` | Patroni image tag | `20171122.132733-3f08711` |
+| `image.pullPolicy` | Patroni image pull policy | `IfNotPresent` |
+| `replicas` | number of statefulset replicas | `3` |
 | `nodeSelector` | nodeSelector map | `{}` |
 | `tolerations` | node taints to tolerate  | `[]` |
 | `resources` | pod resource requests and limits | `{}` |
 | `credentials.superuser` | password for the superuser | `tea` |
-| `credentials.admin` | password for the admin user | `cola` |
-| `credentials.standby` | password for the replication user | `pinacolada` |
-| `etcd.enable` | using etcd as DCS | `true` |
-| `etcd.deployChart` | deploy etcd chart | `true` |
-| `etcd.host` | host name of etcd cluster | not used (Etcd.Discovery is used instead) |
-| `etcd.discovery` | domain name of etcd cluster | `<release-name>-etcd.<namespace>.svc.cluster.local` |
-| `zookeeper.enable` | using zookeeper as DCS | `false` |
-| `zookeeper.deployChart` | deploy zookeeper chart | `false` |
-| `zookeeper.hosts` | list of zookeeper cluster members | 'host1:port1','host2:port2','etc...' |
-| `walE.enable` | use of wal-e tool for base backup/restore | `false` |
-| `walE.scheduleCronJob` | schedule of wal-e backups | `00 01 * * *` |
-| `walE.retainBackups` | number of backups to retain | `2` |
-| `walE.s3Bucket:` | Amazon S3 bucket used for wal-e backups | `` |
-| `walE.gcsBucket` | Google cloud plataform storage used for wal-e backups | `` |
+| `credentials.replication` | password for the replication user | `pinacolada` |
+| `walE.enable`           | use of wal-e tool for base backup/restore | `false` |
+| `walE.scheduleCronJob` | schedule of wal-e backups          | `00 01 * * *` |
+| `walE.retainBackups`   | number of backups to retain         | `2` |
+| `walE.s3Bucket:`       | Amazon S3 bucket used for wal-e backups | `` |
+| `walE.gcsBucket`       | Google cloud plataform storage used for wal-e backups | `` |
 | `walE.kubernetesSecret` | kubernetes secret for provider bucket | `` |
 | `walE.backupThresholdMegabytes` | maximum size of the WAL segments accumulated after the base backup to consider WAL-E restore instead of pg_basebackup | `1024` |
 | `walE.backupThresholdPercentage` | maximum ratio (in percents) of the accumulated WAL files to the base backup to consider WAL-E restore instead of pg_basebackup | `30` |
-| `persistentVolume.accessModes` | Persistent Volume access modes | `[ReadWriteOnce]` |
-| `persistentVolume.annotations` | Annotations for Persistent Volume Claim` | `{}` |
-| `persistentVolume.mountPath` | Persistent Volume mount root path | `/home/postgres/pgdata` |
-| `persistentVolume.size` | Persistent Volume size | `2Gi` |
-| `persistentVolume.storageClass` | Persistent Volume Storage Class | `volume.alpha.kubernetes.io/storage-class: default` |
-| `persistentVolume.subPath` | Subdirectory of Persistent Volume to mount | `""` |
+| `persistentVolume.enabled` | specifies whether persistent volumes are used | `true` |
+| `persistentVolume.accessModes` | persistent volume access modes | `[ReadWriteOnce]` |
+| `persistentVolume.annotations` | annotations for persistent volume claim` | `{}` |
+| `persistentVolume.size` | persistent volume size | `1Gi` |
+| `persistentVolume.storageClass` | persistent volume storage class | `volume.alpha.kubernetes.io/storage-class: default` |
+| `cleanup.image.repository` | cleanup image repository | `quay.io/coreos/hyperkube` |
+| `cleanup.image.tag` | cleanup image tag | `v1.8.4_coreos.0` |
+| `cleanup.image.pullPolicy` | cleanup image pull policy | `IfNotPresent` |
 
 Specify each parameter using the `--set key=value[,key=value]` argument to `helm install`.
 
 Alternatively, a YAML file that specifies the values for the parameters can be provided while installing the chart. For example,
 
 ```console
-$ helm install --name my-release -f values.yaml incubator/patroni
+$ helm install --name my-release -f values.yaml incubator/patroni-k8s
 ```
 
 > **Tip**: You can use the default [values.yaml](values.yaml)
-
-## Cleanup
-
-In order to remove everything you created a simple `helm delete <release-name>` isn't enough (as of now), but you can do the following:
-
-```console
-$ release=<release-name>
-$ helm delete $release
-$ grace=$(kubectl get po $release-patroni-0 --template '{{ .spec.terminationGracePeriodSeconds }}')
-$ kubectl delete statefulset,po -l release=$release
-$ sleep $grace
-$ kubectl delete pvc -l release=$release
-```
-
-## Internals
-
-Patroni is responsible for electing a Postgres master pod by leveraging etcd.
-It then exports this master via a Kubernetes service and a label query that filters for `spilo-role=master`.
-This label is dynamically set on the pod that acts as the master and removed from all other pods.
-Consequently, the service endpoint will point to the current master.
-
-```console
-$ kubectl get pods -l spilo-role -L spilo-role
-NAME                   READY     STATUS    RESTARTS   AGE       SPILO-ROLE
-my-release-patroni-0   1/1       Running   0          9m        replica
-my-release-patroni-1   1/1       Running   0          9m        master
-my-release-patroni-2   1/1       Running   0          8m        replica
-my-release-patroni-3   1/1       Running   0          8m        replica
-my-release-patroni-4   1/1       Running   0          8m        replica
-```

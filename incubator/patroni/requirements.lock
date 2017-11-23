@@ -1,9 +1,0 @@
-dependencies:
-- name: etcd
-  repository: https://kubernetes-charts-incubator.storage.googleapis.com/
-  version: 0.2.1
-- name: zookeeper
-  repository: https://kubernetes-charts-incubator.storage.googleapis.com/
-  version: 0.2.2
-digest: sha256:e973b8bad48f773094e5a83272d47517bf473a45ecb6c1512ab5a0eff55b5c1f
-generated: 2017-11-21T17:47:02.311253402+01:00
