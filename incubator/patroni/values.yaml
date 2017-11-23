@@ -1,62 +1,73 @@
-Name: patroni
-
-Component: patroni
-ImagePullPolicy: IfNotPresent
+imagePullPolicy: IfNotPresent
 
 # The image to use. Spilo is the dockerized Patroni
-Spilo:
+spilo:
   # this image was built from https://github.com/zalando/spilo/tree/master/postgres-appliance
-  Image: registry.opensource.zalan.do/acid/spilo-9.6
-  Version: 1.2-p17
+  image: registry.opensource.zalan.do/acid/spilo-9.6
+  version: 1.2-p17
 
 # How many postgres containers to spawn
-Replicas: 5
+replicas: 5
+
+podAntiAffinity: soft
+
+nodeSelector: {}
+
+tolerations: []
 
 # Resource limits per replica
-Resources:
-  Cpu: 100m
-  Memory: 512Mi
+resources: {}
+  # cpu: 100m
+  # memory: 512Mi
 
 # Node selector for Patroni pods
-# NodeSelector:
+# nodeSelector:
 #  cloud.google.com/gke-nodepool: highmem-pool
 
 # Credentials used by Patroni
 # * more information: https://github.com/zalando/patroni/blob/master/docs/SETTINGS.rst#postgresql
-Credentials:
-  Superuser: tea
-  Admin: cola
-  Standby: pinacolada
+credentials:
+  superuser: tea
+  admin: cola
+  standby: pinacolada
 
 ## Distribution Configuration stores. Please note that only one of the following stores should be selected.
-Etcd:
-  Enable: true
-  DeployChart: true
+etcd:
+  enable: true
+  deployChart: true
   # if not deploying etcd chart, fill-in value for etcd host (etcd.default.svc.cluster.local)
-  Host:
+  host:
   # leave blank to use vendored etcd chart
-  Discovery:
-Zookeeper:
-  Enable: false
-  DeployChart: false
-  # if not deploying etcd chart, fill-in list of ZooKeeper cluster members in format: 'host1:port1','host2:port2','etc...'
-  Hosts:
+  discovery:
 
-WalE:
-  Enable: false
-  Schedule_Cron_Job: 00 01 * * *
-  Retain_Backups: 2
-  S3_Bucket:
-  GCS_Bucket:
-  Kubernetes_Secret:
-  Backup_Threshold_Megabytes: 1024
-  Backup_Threshold_Percentage: 30
+zookeeper:
+  enable: false
+  deployChart: false
+  # if not deploying etcd chart, fill-in list of ZooKeeper cluster members in format: 'host1:port1','host2:port2','etc...'
+  hosts:
+
+walE:
+  enable: false
+  scheduleCronJob: 00 01 * * *
+  retainBackups: 2
+  s3Bucket:
+  gcsBucket:
+  kubernetesSecret:
+  backupThresholdMegabytes: 1024
+  backupThresholdPercentage: 30
 
 persistentVolume:
-  size: 1G
-  storageClass: ""
-  subPath: ""
-  mountPath: "/home/postgres/pgdata"
-  annotations: {}
+  enabled: true
+  ## If defined, storageClassName: <storageClass>
+  ## If set to "-", storageClassName: "", which disables dynamic provisioning
+  ## If undefined (the default) or set to null, no storageClassName spec is
+  ##   set, choosing the default provisioner.  (gp2 on AWS, standard on
+  ##   GKE, AWS & OpenStack)
+  ##
+  # storageClass: "-"
   accessModes:
     - ReadWriteOnce
+  size: 1Gi
+  annotations: {}
+  subPath: ""
+  mountPath: "/home/postgres/pgdata"

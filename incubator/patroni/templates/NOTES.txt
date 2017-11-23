@@ -1,4 +1,5 @@
 Patroni can be accessed via port 5432 on the following DNS name from within your cluster:
+
 {{ template "patroni.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local
 
 To get your password for superuser or admin run:
